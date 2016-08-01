@@ -30,8 +30,8 @@ def yahoo_stock_quote(symbol):
     d['vol']     = int(s[6])
     return d
 
-def stock_history(symbol, i=None, f=None, fmt='%Y-%m-%d'):
-    url = 'http://ichart.finance.yahoo.com/table.csv'
+def stock_history(symbol, i=None, f=None, fmt='%Y-%m-%d', ival=None):
+    url = 'https://ichart.finance.yahoo.com/table.csv'
     date2num = strpdate2num(fmt)
     num2 = {'Y':DateFormatter('%Y'),'m':DateFormatter('%m'),'d':DateFormatter('%d')}
 
@@ -60,9 +60,51 @@ def stock_history(symbol, i=None, f=None, fmt='%Y-%m-%d'):
     s = f.read().strip().split('\n')
     f.close()
 
-    for row in s:
-        print row
+    date2num = strpdate2num('%Y-%m-%d')
+    data = {'date':[], 'open':[], 'high':[], 'low':[], 'close':[], 'volume':[], 'adj-close':[]}
+    def add_data(k,v):
+        data[k].append(v)
+
+    for row in s[1:]:
+        t = row.split(',')
+        add_data('date',date2num(t[0]))
+        add_data('open',float(t[1]))
+        add_data('high',float(t[2]))
+        add_data('low',float(t[3]))
+        add_data('close',float(t[4]))
+        add_data('volume',float(t[5]))
+        add_data('adj-close',float(t[6]))
+
+    date = np.array(data['date'])
+    close = np.array(data['close'])
+
+    if not ival:
+        ival = close[-1]
+
+    fig = plt.figure()
+    ax1 = plt.subplot2grid((1,1),(0,0))
+
+    ax1.plot_date(date,close,'-')
+    ax1.fill_between(date, close, ival, where=close>ival, facecolor='g', alpha=0.5)
+    ax1.fill_between(date, close, ival, where=close<ival, facecolor='r', alpha=0.5)
+    ax1.plot([],[], label='gain',color='g',linewidth=5, alpha=0.5)
+    ax1.plot([],[], label='loss',color='r',linewidth=5, alpha=0.5)
+
+    ax1.set_title(symbol.upper())
+    ax1.set_axis_bgcolor('k')
+    ax1.grid(True, color='w', linestyle='-')
+    ax1.legend()
+
+    for label in ax1.xaxis.get_ticklabels():
+        label.set_rotation(45)
+    ax1.xaxis.label.set_color('c')
+    ax1.yaxis.label.set_color('r')
+
+    plt.xlabel('date')
+    plt.ylabel('price')
+    plt.subplots_adjust(bottom=0.20)
+    plt.show()
 
 if __name__ == '__main__':
     #print yahoo_stock_quote('GOOG')
-    stock_history('AAPL', '2000-01-01')
+    stock_history('ebay', '2015-01-01', ival=25)
